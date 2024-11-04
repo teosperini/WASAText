@@ -3,7 +3,84 @@ info:
   title: WASAText API specification
   description: |-
     This OpenAPI document describes the WASAText API for user login and conversation management.
-  version: "0.1"
+  version: "0.2"
+
+components:
+  schemas:
+    message:
+      type: object
+      properties:
+        conversationId:
+          $ref: '#/components/schemas/convId'
+        messageId:
+          $ref: '#/components/schemas/messageId'
+        senderId:
+          $ref: '#/components/schemas/uId'
+        timestamp: 
+          type: string
+          format: date-time
+          example: "2024-11-04T15:24:30Z"
+        messageType:
+          type: string
+          enum: ["text", "image", "video"]
+          example: "text"
+        text:
+          type: string
+          description: The content of the message
+          example: "see you tomorrow"
+        mediaUrl:
+          type: string
+          format: uri
+          description: The URL of the media
+          example: "https://example.com/media/image123.jpg"
+        unreadMessage:
+          type: boolean
+          example: true
+        reactions:
+          type: array
+          items:
+            type: object
+            properties:
+              userId:
+                $ref: '#/components/schemas/uId' # Riferiemnto allo schema userId
+              emoji:
+                type: string
+                pattern: '^[\u263A\u2705\u1F600-\u1F64F\u1F300-\u1F5FF\u1F680-\u1F6FF\u2600-\u26FF]$'
+                description: Emoji di reazione in formato Unicode
+      required:
+        - conversationId
+        - messageId
+        - senderId
+        - timestamp
+        - messageType
+  
+    convId:
+      type: string
+      pattern: '^\d{9}$'
+      description: The conversation identifier
+      example: 817341271
+
+    uId:
+      type: string
+      pattern: '^\d{10}$'
+      description: The user identifier
+      example: 1325153353
+
+    messageId:
+      type: string
+      pattern: '^\d{11}$'
+      description: The message identifier
+      example: 44817281273
+
+    username:
+      type: string
+      description: The username
+      example: "Jordan"
+      pattern: '^.*?$'
+      minLength: 3
+      maxLength: 16
+
+
 paths:
   /session:
     post:
@@ -22,11 +99,8 @@ paths:
               type: object
               properties:
                 name:
-                  type: string
-                  example: Matteo
-                  pattern: '^.*?$'
-                  minLength: 3
-                  maxLength: 16
+                  $ref: '#/components/schemas/username'
+                  required: true
         required: true
       responses:
         '201':
@@ -36,9 +110,10 @@ paths:
               schema:
                 type: object
                 properties:
-                  identifier:
-                    type: string
-                    example: "abcdef012345"
+                  userId:
+                    $ref: '#/components/schemas/uId'
+        '400':
+          description: Bad Request - missing parameters
         '500':
           description: Server error
     put:
@@ -46,7 +121,7 @@ paths:
       summary: Change the username
       description: |-
         Allow the user to change their nickname while
-        keeping the same identifier.
+        keeping the same identifier
       operationId: setMyUserName
       requestBody:
         description: The new name
@@ -56,17 +131,18 @@ paths:
               type: object
               properties:
                 newName:
-                  type: string
-                  example: Jordan
-                  pattern: '^.*?$'
-                  minLength: 3
-                  maxLength: 16
+                  $ref: '#/components/schemas/username'
+                  required: true
         required: true
       responses:
         '200':
           description: Username successfully changed
+        '400':
+          description: Bad Request - missing parameters
         '401':
           description: Unauthorized - Please authenticate
+        '403':
+          description: Not allowed
         '409':
           description: Conflict - The provided username is already in use
         '422':
@@ -76,27 +152,20 @@ paths:
   /conversations:
     get:
       tags: ["conversations"]
-      summary: Send all the conversations of the user
+      summary: Get all the conversations of the user
       description: |-
         Returns an object containing a list of conversations.
-        A conversation is composed of: the chat name (1), last message timestamp (2), last message
-        (3), a boolean for unread messages (4), the profile
-        photo of the chat (5), and the chat type (6).
+        A conversation is composed of: the conversation id (1),
+        the chat name (2), last message timestamp (3),
+        last message (4), a boolean for unread messages (5),
+        the profile photo of the chat (6), and the chat type (7).
       operationId: getMyConversations
-      requestBody:
-        description: The userId of the requesting client
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                userId:
-                  type: string
-                  example: Federico
-                  pattern: '^.*?$'
-                  minLength: 3
-                  maxLength: 16
-        required: true
+      parameters:
+      - name: userId
+        in: query
+        description: The Id of the user
+        schema:
+          $ref: '#/components/schemas/uId'
       responses:
         '200':
           description: Sent all the conversations
@@ -110,25 +179,25 @@ paths:
                     items:
                       type: object
                       properties:
+                        conversationId:
+                          $ref: '#/components/schemas/convId'
                         chatName:
                           type: string
                           example: "Jordan"
-                        lastMessageTimestamp:
-                          type: string
-                          format: date-time
                         lastMessage:
-                          type: string
-                          example: "see you tomorrow"
-                        hasUnreadMessages:
-                          type: boolean
+                          $ref: '#/components/schemas/message'
                         profileImageUrl:
                           type: string
                           example: "https://shorturl.at/Eand8"
                         chatType:
                           type: string
-                          enum: [chat, group]
+                          enum: ["chat", "group"]
+        '400':
+          description: Bad Request - missing parameters
         '401':
-          description: Unauthorized, please authenticate
+          description: Unauthorized - please authenticate
+        '403':
+          description: Not allowed
         '404':
           description: No conversations were found
         '500':
@@ -147,30 +216,32 @@ paths:
               type: object
               properties:
                 creatorId:
-                  type: string
-                  description: The ID of the conversation creator
-                  example: "creator123"
-                  pattern: '^.*?$'
-                  minLength: 3
-                  maxLength: 16
+                  $ref: '#/components/schemas/uId'
                 members:
                   type: array
                   items:
-                    type: string
-                    description: The user ID of each member in the conversation.
-                    example: "Lorenzo"
-                    pattern: '^.*?$'
-                    minLength: 3
-                    maxLength: 16
+                    $ref: '#/components/schemas/uId'
+                    description: The user id of each member in the conversation
                     minItems: 1  # Require at least one members, the other one is the creator
                 chatType:
                   type: string
-                  enum: [chat, group]
-                  description: Type of conversation (chat or group).
+                  enum: ["chat", "group"]
+                  description: Type of conversation (chat or group)
                 initialMessage:
                   type: string
-                  description: The first message to initialize the conversation.
-                  example: "Hello everyone!"
+                  description: |-
+                    The first message to initialize the conversation
+                    (not applicable to single chats)
+                  example: "Hello!"
+                profileImageUrl:
+                  type: string
+                  description: The profile image of a group chat (non)
+                  example: "https://shorturl.at/Eand8"
+              required:
+              - creatorId
+              - members
+              - chatType
+              - initialMessage
         required: true
       responses:
         '201':
@@ -181,34 +252,36 @@ paths:
                 type: object
                 properties:
                   conversationId:
-                    type: string
-                    description: ID of the created conversation
-                    example: "12345"
+                    $ref: '#/components/schemas/convId'
                   initialMessageId:
-                    type: string
-                    description: ID of the initial message
-                    example: "67890"
-                  timestamp:
-                    type: string
-                    format: date-time
+                    $ref: '#/components/schemas/messageId'
         '400':
           description: Bad Request - missing parameters
         '401':
-          description: Unauthorized
+          description: Unauthorized - please authenticate
+        '403':
+          description: Not allowed
         '422':
-          description: Unprocessable Content - incorrect creator id or member id
+          description: Unprocessable Content - non-existent id(s) or invalid chat type
         '500':
           description: Server error
+
   /conversations/{conversationId}:
     get:
-      tags: ["conversations"]
+      tags: ["messages"]
       summary: Loads all the messages from one conversation
       description: |-
-        Returns an object containing an array of messages.
+        Returns an object containing an array of messages
       operationId: getConversation
+      parameters:
+      - name: conversationId
+        in: query
+        description: The Id of the conversation
+        schema:
+          $ref: '#/components/schemas/convId'
       responses:
         '200':
-          description: Returns all messages from the conversation.
+          description: Returns all messages from the conversation
           content:
             application/json:
               schema:
@@ -219,21 +292,104 @@ paths:
                     items:
                       type: object
                       properties:
-                        messageId:
-                          type: string
-                          description: Unique identifier for the message
-                        senderId:
-                          type: string
-                          description: ID of the sender
-                        timestamp:
-                          type: string
-                          format: date-time
-                        content:
-                          type: string
-                          description: Message content
+                        message:
+                          $ref: '#/components/schemas/message'
+        '400':
+          description: Bad Request - missing parameters
         '401':
           description: Unauthorized - Please authenticate
+        '403':
+          description: Not allowed
         '404':
           description: Conversation not found
         '500':
           description: Server error
+    post:
+      tags: ["messages"]
+      summary: Send a new message
+      description: |-
+        Send a message to the current chat
+      operationId: sendMessage
+      requestBody:
+        description: The conversationId of the conversation w
+        content:
+          application/json:
+            schema:
+              type: integer
+
+      responses:
+        '200':
+          description: ""
+
+  /conversations/{conversationId}/{messageId}:
+    delete:
+      tags: ["messages"]
+      summary: Delete a message
+      description: A message can be deleted only if it's from
+        the user that has sent it
+      operationId: deleteMessage
+      parameters:
+      - name: messageId
+        in: query
+        schema:
+          $ref: '#/components/schemas/messageId'
+      - name: conversationId
+        in: query
+        schema:
+            $ref: '#/components/schemas/messageId'
+      responses:
+        '200':
+          description: Message correctly deleted
+        '400':
+          description: Bad Request - missing parameters
+        '403':
+          description: Not allowed
+    #post:
+    #  tags: ["messages"]
+    #  summary: Forward a message
+    #  operationId: forwardMessage
+    
+  # comment
+  # delete comment
+
+
+  /users:
+    get:
+      tags: ["users"]
+      operationId: getUsers
+      summary: Returns a list containing all the WASAText users
+      description: |-
+        This method returns a list of containing all the WASAText
+        userIds. The client can also specify a parameter in the query
+        to filter the ids
+      parameters:
+        - name: name
+          in: query
+          required: false
+          description: The name of the user to search for
+          schema:
+            type: string
+            example: "Leonardo"
+      responses:
+        '200':
+          description: The list has correctly been sent
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  users:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        username:
+                          type: string
+                          example: "Marco"
+                        userId:
+                          type: string
+                          pattern: '^\d{10}$'
+        '401':
+          description: Unauthorized, please authenticate
+        '404':
+          description: No users were found
