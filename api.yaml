@@ -1,0 +1,239 @@
+openapi: 3.0.3
+info:
+  title: WASAText API specification
+  description: |-
+    This OpenAPI document describes the WASAText API for user login and conversation management.
+  version: "0.1"
+paths:
+  /session:
+    post:
+      tags: ["login"]
+      summary: Logs in the user
+      description: |- 
+        If the user does not exist, it will be created,
+        and an identifier is returned.
+        If the user exists, the user identifier is returned.
+      operationId: doLogin
+      requestBody:
+        description: User details
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  example: Matteo
+                  pattern: '^.*?$'
+                  minLength: 3
+                  maxLength: 16
+        required: true
+      responses:
+        '201':
+          description: User log-in action successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  identifier:
+                    type: string
+                    example: "abcdef012345"
+        '500':
+          description: Server error
+    put:
+      tags: ["login"]
+      summary: Change the username
+      description: |-
+        Allow the user to change their nickname while
+        keeping the same identifier.
+      operationId: setMyUserName
+      requestBody:
+        description: The new name
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                newName:
+                  type: string
+                  example: Jordan
+                  pattern: '^.*?$'
+                  minLength: 3
+                  maxLength: 16
+        required: true
+      responses:
+        '200':
+          description: Username successfully changed
+        '401':
+          description: Unauthorized - Please authenticate
+        '409':
+          description: Conflict - The provided username is already in use
+        '422':
+          description: Unprocessable Content - The provided username is not allowed
+        '500':
+          description: Server error
+  /conversations:
+    get:
+      tags: ["conversations"]
+      summary: Send all the conversations of the user
+      description: |-
+        Returns an object containing a list of conversations.
+        A conversation is composed of: the chat name (1), last message timestamp (2), last message
+        (3), a boolean for unread messages (4), the profile
+        photo of the chat (5), and the chat type (6).
+      operationId: getMyConversations
+      requestBody:
+        description: The userId of the requesting client
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                userId:
+                  type: string
+                  example: Federico
+                  pattern: '^.*?$'
+                  minLength: 3
+                  maxLength: 16
+        required: true
+      responses:
+        '200':
+          description: Sent all the conversations
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  conversations:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        chatName:
+                          type: string
+                          example: "Jordan"
+                        lastMessageTimestamp:
+                          type: string
+                          format: date-time
+                        lastMessage:
+                          type: string
+                          example: "see you tomorrow"
+                        hasUnreadMessages:
+                          type: boolean
+                        profileImageUrl:
+                          type: string
+                          example: "https://shorturl.at/Eand8"
+                        chatType:
+                          type: string
+                          enum: [chat, group]
+        '401':
+          description: Unauthorized, please authenticate
+        '404':
+          description: No conversations were found
+        '500':
+          description: Server error
+    post:
+      tags: ["conversations"]
+      summary: Create a new conversation (chat or group)
+      description: |-
+        Creates a new conversation with the specified user IDs.
+      operationId: createChat
+      requestBody:
+        description: The userIds of the participants to put in the group
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                creatorId:
+                  type: string
+                  description: The ID of the conversation creator
+                  example: "creator123"
+                  pattern: '^.*?$'
+                  minLength: 3
+                  maxLength: 16
+                members:
+                  type: array
+                  items:
+                    type: string
+                    description: The user ID of each member in the conversation.
+                    example: "Lorenzo"
+                    pattern: '^.*?$'
+                    minLength: 3
+                    maxLength: 16
+                    minItems: 1  # Require at least one members, the other one is the creator
+                chatType:
+                  type: string
+                  enum: [chat, group]
+                  description: Type of conversation (chat or group).
+                initialMessage:
+                  type: string
+                  description: The first message to initialize the conversation.
+                  example: "Hello everyone!"
+        required: true
+      responses:
+        '201':
+          description: Conversation created and initial message sent.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  conversationId:
+                    type: string
+                    description: ID of the created conversation
+                    example: "12345"
+                  initialMessageId:
+                    type: string
+                    description: ID of the initial message
+                    example: "67890"
+                  timestamp:
+                    type: string
+                    format: date-time
+        '400':
+          description: Bad Request - missing parameters
+        '401':
+          description: Unauthorized
+        '422':
+          description: Unprocessable Content - incorrect creator id or member id
+        '500':
+          description: Server error
+  /conversations/{conversationId}:
+    get:
+      tags: ["conversations"]
+      summary: Loads all the messages from one conversation
+      description: |-
+        Returns an object containing an array of messages.
+      operationId: getConversation
+      responses:
+        '200':
+          description: Returns all messages from the conversation.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  messages:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        messageId:
+                          type: string
+                          description: Unique identifier for the message
+                        senderId:
+                          type: string
+                          description: ID of the sender
+                        timestamp:
+                          type: string
+                          format: date-time
+                        content:
+                          type: string
+                          description: Message content
+        '401':
+          description: Unauthorized - Please authenticate
+        '404':
+          description: Conversation not found
+        '500':
+          description: Server error
