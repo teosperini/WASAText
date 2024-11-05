@@ -3,7 +3,7 @@ info:
   title: WASAText API specification
   description: |-
     This OpenAPI document describes the WASAText API for user login and conversation management.
-  version: "0.3"
+  version: "0.3.1"
 
 components:
   schemas:
@@ -60,17 +60,11 @@ components:
       description: The conversation identifier
       example: 817341271
 
-    uId:
-      type: string
-      pattern: '^\d{10}$'
-      description: The user identifier
-      example: 1325153353
-
     messageId:
       type: string
-      pattern: '^\d{11}$'
+      pattern: '^\d{10}$'
       description: The message identifier
-      example: 44817281273
+      example: 4481728127
 
     username:
       type: string
@@ -80,6 +74,14 @@ components:
       minLength: 3
       maxLength: 16
 
+  parameters:
+    authHeader:
+      name: Authorization
+      in: header
+      required: true
+      schema:
+        type: string
+      description: User auth token
 
 paths:
   /session:
@@ -88,8 +90,8 @@ paths:
       summary: Logs in the user
       description: |- 
         If the user does not exist, it will be created,
-        and an identifier is returned.
-        If the user exists, the user identifier is returned.
+        and an identifier is returned. If the user exists,
+        the user identifier is returned
       operationId: doLogin
       requestBody:
         description: User details
@@ -127,6 +129,8 @@ paths:
         keeping the same identifier. The new username needs to 
         fullfill the same 
       operationId: setMyUserName
+      parameters:
+      - $ref: '#/components/parameters/authHeader'
       requestBody:
         description: The new name
         content:
@@ -166,13 +170,8 @@ paths:
         last message (4), a boolean for unread messages (5),
         the profile photo of the chat (6), and the chat type (7).
       operationId: getMyConversations
-      # how to authenticate?
       parameters:
-      - name: userId
-        in: query
-        description: The Id of the user
-        schema:
-          $ref: '#/components/schemas/uId'
+      - $ref: '#/components/parameters/authHeader'
       responses:
         '200':
           description: Sent all the conversations
@@ -219,6 +218,8 @@ paths:
         A chat is a conversation only between two users, a group is,
         on the other side, a conversation with at least two users 
       operationId: createConversation
+      parameters:
+      - $ref: '#/components/parameters/authHeader'
       requestBody:
         description: The userId(s) of the participant(s) to put in
           the conversation
@@ -287,8 +288,8 @@ paths:
       description: |-
         Returns all the messages from one conversation
       operationId: getConversation
-      # how to authenticate?
       parameters:
+      - $ref: '#/components/parameters/authHeader'
       - name: conversationId
         in: path
         schema:
@@ -326,17 +327,13 @@ paths:
       description: |-
         Send a message to the current chat
       operationId: sendMessage
-      # how to authenticate?
       parameters:
+      - $ref: '#/components/parameters/authHeader'
       - name: conversationId
         in: path
         schema:
           $ref: '#/components/schemas/convId'
         required: true
-      - name: userId
-        in: query
-        schema:
-          $ref: '#/components/schemas/uId'
       requestBody:
         description: The text of the message to send
         content:
@@ -384,8 +381,8 @@ paths:
       description: |-
         A message can be forwarded to another chat
       operationId: forwardMessage
-      # how to authenticate?
       parameters:
+      - $ref: '#/components/parameters/authHeader'
       - name: conversationId
         in: path
         schema:
@@ -395,11 +392,6 @@ paths:
         in: path
         schema:
           $ref: '#/components/schemas/messageId'
-        required: true
-      - name: userId
-        in: query
-        schema:
-          $ref: '#/components/schemas/uId'
         required: true
       requestBody:
         content:
@@ -432,6 +424,7 @@ paths:
       operationId: deleteMessage
       # how to authenticate?
       parameters:
+      - $ref: '#/components/parameters/authHeader'
       - name: conversationId
         in: path
         schema:
@@ -442,10 +435,6 @@ paths:
         schema:
           $ref: '#/components/schemas/messageId'
         required: true
-      - name: userId
-        in: query
-        schema:
-          $ref: '#/components/schemas/uId'
       responses:
         '204':
           description: Message correctly deleted
@@ -469,6 +458,7 @@ paths:
         each user in the chat
       operationId: commentMessage
       parameters:
+      - $ref: '#/components/parameters/authHeader'
       - name: conversationId
         in: path
         schema:
@@ -479,16 +469,19 @@ paths:
         schema:
           $ref: '#/components/schemas/messageId'
         required: true
-      - name: userId
-        in: query
-        schema:
-          $ref: '#/components/schemas/uId'
-      - name: emoji
-        in: query
-        schema:
-          type: string
-          description: the unicode code of the emoji
-          example: "\u1F600"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                emoji:
+                  type: string
+                  description: the unicode code of the emoji
+                  example: "\u1F600"
+              required:
+              - emoji
+        required: true
       responses:
         '201':
           description: Comment correctly added
@@ -509,8 +502,8 @@ paths:
       description: A comment can be deleted only if it's from
         the user that has sent it
       operationId: uncommentMessage
-      # how to authenticate?
       parameters:
+      - $ref: '#/components/parameters/authHeader'
       - name: conversationId
         in: path
         schema:
@@ -521,10 +514,6 @@ paths:
         schema:
           $ref: '#/components/schemas/messageId'
         required: true
-      - name: userId
-        in: query
-        schema:
-          $ref: '#/components/schemas/uId'
       responses:
         '204':
           description: Comment correctly deleted
@@ -538,6 +527,36 @@ paths:
           description: Server error
 
 
+  /conversations/{covnersationId}/members:
+    post:
+      tags: ["groups"]
+      summary: Add a new user to the group
+      description: |-
+        Add a new user to the group. Users can't join by
+        themselves; someone has to always add them 
+      operationId: addToGroup
+      parameters:
+      - $ref: '#/components/parameters/authHeader'
+      - name: conversationId
+        in: path
+        schema:
+          $ref: '#/components/schemas/convId'
+        required: true
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                userId:
+                  $ref: '#/components/schemas/uId'
+      responses:
+        '201':
+          description: new
+
+
+
+
   /users:
     # rivedere
     get:
@@ -549,13 +568,14 @@ paths:
         query to filter the Ids
       operationId: getUsers
       parameters:
-        - name: name
-          in: query
-          required: false
-          description: The name of the user to search for
-          schema:
-            type: string
-            example: "Leonardo"
+      - $ref: '#/components/parameters/authHeader'
+      - name: name
+        in: query
+        required: false
+        description: The name of the user to search for
+        schema:
+          type: string
+          example: "Leonardo"
       responses:
         '200':
           description: The list has correctly been sent
@@ -572,9 +592,6 @@ paths:
                         username:
                           type: string
                           example: "Marco"
-                        userId:
-                          type: string
-                          pattern: '^\d{10}$'
         '401':
           description: Unauthorized - Please authenticate
         '403':
