@@ -105,8 +105,8 @@ paths:
       description: |- 
         If the user does not exist, it will be created,
         and an userId and a token are returned. If the user exists,
-        the token is returned. The token will be used to identify 
-        the user request
+        the token is returned. The token will be used to identify
+        further requests from the user in this session
       operationId: doLogin
       requestBody:
         description: User details
