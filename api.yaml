@@ -4,6 +4,9 @@ info:
   description: |-
     This OpenAPI document describes the WASAText API for user login and conversation management.
   version: "1.0"
+  contact:
+    name: Matteo Sperini
+    email: sperini.1987495@studenti.uniroma1.it
 
 components:
   schemas:
