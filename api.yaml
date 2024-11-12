@@ -1,0 +1,761 @@
+openapi: 3.0.3
+info:
+  title: WASAText API specification
+  description: |-
+    This OpenAPI document describes the WASAText API for user login and conversation management.
+  version: "1.0.1"
+  contact:
+    name: Matteo Sperini
+    email: sperini.1987495@studenti.uniroma1.it
+
+components:
+  schemas:
+    message:
+      type: object
+      properties:
+        conversationId:
+          $ref: '#/components/schemas/convId'
+        messageId:
+          $ref: '#/components/schemas/messageId'
+        senderId:
+          $ref: '#/components/schemas/uId'
+        timestamp: 
+          type: string
+          format: date-time
+          example: "2024-11-04T15:24:30Z"
+        messageType:
+          type: string
+          enum: ["text", "image"]
+          example: "text"
+        text:
+          type: string
+          description: The content of the message
+          example: "see you tomorrow"
+        mediaUrl:
+          $ref: '#/components/schemas/media'
+        unreadMessage:
+          type: boolean
+          example: true
+        comment:
+          type: array
+          items:
+            type: object
+            properties:
+              userId:
+                $ref: '#/components/schemas/uId'
+              emoji:
+                type: string
+                pattern: '^[\u263A\u2705\u1F600-\u1F64F\u1F300-\u1F5FF\u1F680-\u1F6FF\u2600-\u26FF]$'
+                description: Unicode emoji
+      required:
+        - conversationId
+        - messageId
+        - senderId
+        - timestamp
+        - messageType
+    media:
+      type: string
+      format: uri
+      description: The URL of the media
+      example: "https://example.com/media/image123.jpg"
+  
+    convId:
+      type: string
+      pattern: '^\d{9}$'
+      description: The conversation identifier
+      example: 817341271
+
+    uId:
+      type: string
+      pattern: '^\d{10}$'
+      description: The conversation identifier
+      example: 5243454124
+
+    messageId:
+      type: string
+      pattern: '^\d{11}$'
+      description: The message identifier
+      example: 4481728127
+
+    username:
+      type: string
+      description: The username
+      example: "Jordan"
+      pattern: '^.*?$'
+      minLength: 3
+      maxLength: 16
+    
+    token:
+      type: string
+      pattern: '^\d{12}$'
+      example: 524345412462
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      description: User auth token
+
+security:
+  - bearerAuth: []
+
+paths:
+  /session:
+    post:
+      tags: ["login"]
+      summary: Logs in the user
+      description: |- 
+        If the user does not exist, it will be created,
+        and an userId and a token are returned. If the user exists,
+        the token is returned. The token will be used to identify
+        further requests from the user in this session (bearer authentication)
+      operationId: doLogin
+      requestBody:
+        description: User details
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  $ref: '#/components/schemas/username'
+        required: true
+      responses:
+        '201':
+          description: User log-in action successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  userId:
+                    $ref: '#/components/schemas/uId'
+                  token:
+                    $ref: '#/components/schemas/token'
+        '400':
+          description: Bad Request - missing parameters
+        '422':
+          description: Unprocessable Content - The provided username is not allowed
+        '500':
+          description: Server error
+
+  /session/username:
+    put:
+      tags: ["login"]
+      summary: Change the username
+      description: |-
+        Allow the user to change their username while
+        keeping the same identifier. The new username needs to 
+        fullfill the same 
+      operationId: setMyUserName
+      requestBody:
+        description: The new name
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                newName:
+                  $ref: '#/components/schemas/username'
+        required: true
+      responses:
+        '204':
+          description: Username successfully changed
+        '400':
+          description: Bad Request - missing parameters
+        '401':
+          description: Unauthorized - Please authenticate
+        '403':
+          description: Not allowed
+        '409':
+          description: Conflict - The provided username is already in use
+        '422':
+          description: Unprocessable Content - The provided username is not allowed
+        '500':
+          description: Server error
+
+  /session/image:
+    put:
+      tags: ["users"]
+      summary: Change personal profile image
+      description: |-
+        Upload the new user profile image 
+      operationId: setMyPhoto
+      requestBody:
+        description: The new image
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                newImage:
+                  $ref: '#/components/schemas/media'
+        required: true
+      responses:
+        '204':
+          description: Profile image successfully changed
+        '400':
+          description: Bad Request - missing parameters
+        '401':
+          description: Unauthorized - Please authenticate
+        '403':
+          description: Not allowed
+        '413':
+          description: Payload Too Large
+        '415':
+          description: Unsupported Media Type
+            accepted = (.png, .jpg, .jpeg, .gif)
+        '500':
+          description: Server error
+          
+  /conversations:
+    get:
+      tags: ["conversations"]
+      summary: Get all the conversations of the user
+      description: |-
+        Returns an object containing a list of conversations.
+        A conversation is composed of: the conversation id (1),
+        the chat name (2), last message timestamp (3),
+        last message (4), a boolean for unread messages (5),
+        the profile photo of the chat (6), and the chat type (7).
+      operationId: getMyConversations
+      responses:
+        '200':
+          description: Sent all the conversations
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  conversations:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        conversationId:
+                          $ref: '#/components/schemas/convId'
+                        chatName:
+                          type: string
+                          example: "Jordan"
+                        lastMessage:
+                          $ref: '#/components/schemas/message'
+                        profileImageUrl:
+                          type: string
+                          example: "https://shorturl.at/Eand8"
+                        chatType:
+                          type: string
+                          enum: ["chat", "group"]
+        '400':
+          description: Bad Request - missing parameters
+        '401':
+          description: Unauthorized - please authenticate
+        '403':
+          description: Not allowed
+        '404':
+          description: No conversations were found
+        '500':
+          description: Server error
+    
+    post:
+      tags: ["conversations"]
+      summary: Create a new conversation (chat or group)
+      description: |-
+        Creates a new conversation with the specified user Ids.
+        The user can specify whether it can create a group or chat.
+        A chat is a conversation only between two users, a group is,
+        on the other side, a conversation with at least two users 
+      operationId: createConversation
+      requestBody:
+        description: The userId(s) of the participant(s) to put in
+          the conversation
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                creatorId:
+                  $ref: '#/components/schemas/uId'
+                members:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      user:
+                        $ref: '#/components/schemas/uId'
+                  minItems: 1  # Require at least one members, the other one is the creator
+                chatType:
+                  type: string
+                  enum: ["chat", "group"]
+                  description: Type of conversation (chat or group)
+                initialMessage:
+                  type: string
+                  description: The first message to initialize
+                    the conversation
+                  example: "Hello!"
+                profileImageUrl:
+                  type: string
+                  description: The profile image of a group chat
+                    (not applicable to single chats)
+                  example: "https://shorturl.at/Eand8"
+                groupName:
+                  type: string
+                  example: "School group"
+              required:
+              - creatorId
+              - members
+              - chatType
+              - initialMessage
+        required: true
+      responses:
+        '201':
+          description: Conversation created and initial message sent
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  conversationId:
+                    $ref: '#/components/schemas/convId'
+                  initialMessageId:
+                    $ref: '#/components/schemas/messageId'
+        '400':
+          description: Bad Request - Missing parameters
+        '401':
+          description: Unauthorized - Please authenticate
+        '403':
+          description: Not allowed
+        '422':
+          description: Unprocessable Content - Non-existent id(s) or
+            invalid chat type
+        '500':
+          description: Server error
+
+
+  /conversations/{conversationId}:
+    get:
+      tags: ["messages"]
+      summary: Loads all the messages from one conversation
+      description: |-
+        Returns all the messages from one conversation
+      operationId: getConversation
+      parameters:
+      - name: conversationId
+        in: path
+        schema:
+          $ref: '#/components/schemas/convId'
+        required: true
+      responses:
+        '200':
+          description: Returns an object containing an array of messages
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  messages:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        message:
+                          $ref: '#/components/schemas/message'
+        '400':
+          description: Bad Request - Missing parameters
+        '401':
+          description: Unauthorized - Please authenticate
+        '403':
+          description: Not allowed
+        '404':
+          description: Conversation not found
+        '500':
+          description: Server error
+          
+    post:
+      tags: ["messages"]
+      summary: Send a new message
+      description: |-
+        Send a message to the current chat
+      operationId: sendMessage
+      parameters:
+      - name: conversationId
+        in: path
+        schema:
+          $ref: '#/components/schemas/convId'
+        required: true
+      requestBody:
+        description: The text of the message to send
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                messageType:
+                  type: string
+                  enum: ["text", "image", "imageText"]
+                  example: "text"
+                text:
+                  type: string
+                  description: The content of the message
+                  example: "Hello, how are you doing?"
+                mediaUrl:
+                  type: string
+                  format: uri
+                  description: The URL of the media
+                  example: "https://example.com/media/image123.jpg"
+              required:
+              - messageType
+        required: true
+      responses:
+        '201':
+          description: Message sent correctly
+        '400':
+          description: Bad Request - Missing parameters
+        '401':
+          description: Unauthorized - Please authenticate
+        '403':
+          description: Not allowed
+        '404':
+          description: Conversation not found
+        '422':
+          description: Unprocessable Content - Invalid image type
+        '500':
+          description: Server error
+
+
+  /conversations/{conversationId}/{messageId}:
+    post:
+      tags: ["messages"]
+      summary: Forward a message
+      description: |-
+        A message can be forwarded to another chat
+      operationId: forwardMessage
+      parameters:
+      - name: conversationId
+        in: path
+        schema:
+          $ref: '#/components/schemas/convId'
+        required: true
+      - name: messageId
+        in: path
+        schema:
+          $ref: '#/components/schemas/messageId'
+        required: true
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                newConversationId:
+                  $ref: '#/components/schemas/convId'
+      responses:
+        '201':
+          description: Message correctly forwarded
+        '400':
+          description: Bad Request - Missing parameters
+        '401':
+          description: Unauthorized - Please authenticate
+        '403':
+          description: Not allowed
+        '404':
+          description: Conversation or message not found
+        '500':
+          description: Server error
+  
+    delete:
+      tags: ["messages"]
+      summary: Delete a message
+      description: |-
+        A message can be deleted only if it's from
+        the user that has sent it
+      operationId: deleteMessage
+      # how to authenticate?
+      parameters:
+      - name: conversationId
+        in: path
+        schema:
+          $ref: '#/components/schemas/convId'
+        required: true
+      - name: messageId
+        in: path
+        schema:
+          $ref: '#/components/schemas/messageId'
+        required: true
+      responses:
+        '204':
+          description: Message correctly deleted
+        '400':
+          description: Bad Request - Missing parameters
+        '401':
+          description: Unauthorized - Please authenticate
+        '403':
+          description: Not allowed
+        '404':
+          description: Conversation or message not found
+        '500':
+          description: Server error
+        
+
+  /conversations/{conversationId}/{messageId}/emoji:
+    post: 
+      tags: ["messages"]
+      summary: Comment a message
+      description: A message can be commented only once from
+        each user in the chat
+      operationId: commentMessage
+      parameters:
+      - name: conversationId
+        in: path
+        schema:
+          $ref: '#/components/schemas/convId'
+        required: true
+      - name: messageId
+        in: path
+        schema:
+          $ref: '#/components/schemas/messageId'
+        required: true
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                emoji:
+                  type: string
+                  description: the unicode code of the emoji
+                  example: "\u1F600"
+              required:
+              - emoji
+        required: true
+      responses:
+        '201':
+          description: Comment correctly added
+        '400':
+          description: Bad Request - Missing parameters
+        '401':
+          description: Unauthorized - Please authenticate
+        '403':
+          description: Not allowed
+        '404':
+          description: Conversation or message not found
+        '500':
+          description: Server error
+
+    delete:
+      tags: ["messages"]
+      summary: Delete a comment
+      description: A comment can be deleted only if it's from
+        the user that has sent it
+      operationId: uncommentMessage
+      parameters:
+      - name: conversationId
+        in: path
+        schema:
+          $ref: '#/components/schemas/convId'
+        required: true
+      - name: messageId
+        in: path
+        schema:
+          $ref: '#/components/schemas/messageId'
+        required: true
+      responses:
+        '204':
+          description: Comment correctly deleted
+        '400':
+          description: Bad Request - Missing parameters
+        '401':
+          description: Unauthorized - Please authenticate
+        '403':
+          description: Not allowed
+        '404':
+          description: Conversation or message not found
+        '500':
+          description: Server error
+
+
+  /conversations/{conversationId}/members:
+    post:
+      tags: ["groups"]
+      summary: Add a new user to the group
+      description: |-
+        Add a new user to the group. Users can't join by
+        themselves; someone has to always add them 
+      operationId: addToGroup
+      parameters:
+      - name: conversationId
+        in: path
+        schema:
+          $ref: '#/components/schemas/convId'
+        required: true
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                userId:
+                  $ref: '#/components/schemas/uId'
+      responses:
+        '201':
+          description: New user correctly added to the chat
+        '400':
+          description: Bad Request - Missing parameters
+        '401':
+          description: Unauthorized - Please authenticate
+        '403':
+          description: Not allowed
+        '404':
+          description: Group or message not found
+        '500':
+          description: Server error
+
+    delete:
+      tags: ["groups"]
+      summary: Leave the group
+      description: |-
+        Leave a group. Users cannot kick other users from a group
+      operationId: leaveGroup
+      parameters:
+        - name: conversationId
+          in: path
+          schema:
+            $ref: '#/components/schemas/convId'
+          required: true
+      responses:
+        '204':
+          description: Group left correctly
+        '400':
+          description: Bad Request - Missing parameters
+        '401':
+          description: Unauthorized - Please authenticate
+        '403':
+          description: Not allowed
+        '404':
+          description: Group not found
+        '500':
+          description: Server error
+
+  
+  /conversations/{conversationId}/name:
+    put:
+      tags: ["groups"]
+      summary: Change the name of a group
+      description: |-
+        Change the name of a group. Every member of the group
+        can change the name of it
+      operationId: setGroupName
+      parameters:
+      - name: conversationId
+        in: path
+        schema:
+          $ref: '#/components/schemas/convId'
+        required: true
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                newGroupName:
+                  type: string
+      responses:
+        '204':
+          description: Group name successfully changed
+        '400':
+          description: Bad Request - Missing parameters
+        '401':
+          description: Unauthorized - Please authenticate
+        '403':
+          description: Not allowed
+        '404':
+          description: Group not found
+        '409':
+          description: Conflict - Please choose another name
+        '500':
+          description: Server error
+    
+
+  /conversations/{conversationId}/image:
+    put:
+      summary: Change the profile image of a group
+      description: |-
+        Change the profile image of a group. Every member of
+        the group can change the profile image of it
+      operationId: setGroupPhoto
+      parameters:
+      - name: conversationId
+        in: path
+        schema:
+          $ref: '#/components/schemas/convId'
+        required: true
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                newGroupImage:
+                  $ref: '#/components/schemas/media'        
+      responses:
+        '204':
+          description: Group image successfully changed
+        '400':
+          description: Bad Request - Missing parameters
+        '401':
+          description: Unauthorized - Please authenticate
+        '403':
+          description: Not allowed
+        '404':
+          description: Group not found
+        '413':
+          description: Payload Too Large
+        '415':
+          description: Unsupported Media Type
+            accepted = (.png, .jpg, .jpeg, .gif)
+        '500':
+          description: Server error
+
+
+  /users:
+    # rivedere
+    get:
+      tags: ["users"]
+      summary: Returns a list containing all the WASAText users
+      description: |-
+        This method returns a list containing all the WASAText
+        users. The client can also specify a parameter in the
+        query to filter the Ids
+      operationId: getUsers
+      parameters:
+      - name: name
+        in: query
+        required: false
+        description: The name of the user to search for
+        schema:
+          type: string
+          example: "Leonardo"
+      responses:
+        '200':
+          description: The list has correctly been sent
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  users:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        username:
+                          $ref: '#/components/schemas/username'
+                        userId:
+                          $ref: '#/components/schemas/uId'
+        '401':
+          description: Unauthorized - Please authenticate
+        '403':
+          description: Not allowed
+        '404':
+          description: No users were found
+        '500':
+          description: Server error
