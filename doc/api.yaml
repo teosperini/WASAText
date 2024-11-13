@@ -24,9 +24,7 @@ components:
           format: date-time
           example: "2024-11-04T15:24:30Z"
         messageType:
-          type: string
-          enum: ["text", "image"]
-          example: "text"
+          $ref: '#/components/schemas/messageType'
         text:
           type: string
           description: The content of the message
@@ -45,14 +43,16 @@ components:
                 $ref: '#/components/schemas/uId'
               emoji:
                 type: string
-                pattern: '^[\u263A\u2705\u1F600-\u1F64F\u1F300-\u1F5FF\u1F680-\u1F6FF\u2600-\u26FF]$'
                 description: Unicode emoji
+                example: '\u263A'
+
       required:
         - conversationId
         - messageId
         - senderId
         - timestamp
         - messageType
+    
     media:
       type: string
       format: uri
@@ -84,6 +84,15 @@ components:
       pattern: '^.*?$'
       minLength: 3
       maxLength: 16
+    
+    messageType:
+      type: string
+      enum: ["text", "image", "imageText"]
+      example: "text"
+    
+    chatType:
+      type: string
+      enum: ["chat", "group"]
     
     token:
       type: string
@@ -145,8 +154,7 @@ paths:
       summary: Change the username
       description: |-
         Allow the user to change their username while
-        keeping the same identifier. The new username needs to 
-        fullfill the same 
+        keeping the same identifier
       operationId: setMyUserName
       requestBody:
         description: The new name
@@ -200,11 +208,6 @@ paths:
           description: Unauthorized - Please authenticate
         '403':
           description: Not allowed
-        '413':
-          description: Payload Too Large
-        '415':
-          description: Unsupported Media Type
-            accepted = (.png, .jpg, .jpeg, .gif)
         '500':
           description: Server error
           
@@ -243,8 +246,7 @@ paths:
                           type: string
                           example: "https://shorturl.at/Eand8"
                         chatType:
-                          type: string
-                          enum: ["chat", "group"]
+                          $ref: '#/components/schemas/chatType'
         '400':
           description: Bad Request - missing parameters
         '401':
@@ -284,9 +286,7 @@ paths:
                         $ref: '#/components/schemas/uId'
                   minItems: 1  # Require at least one members, the other one is the creator
                 chatType:
-                  type: string
-                  enum: ["chat", "group"]
-                  description: Type of conversation (chat or group)
+                  $ref: '#/components/schemas/chatType'
                 initialMessage:
                   type: string
                   description: The first message to initialize
@@ -390,18 +390,13 @@ paths:
               type: object
               properties:
                 messageType:
-                  type: string
-                  enum: ["text", "image", "imageText"]
-                  example: "text"
+                   $ref: '#/components/schemas/messageType'
                 text:
                   type: string
                   description: The content of the message
                   example: "Hello, how are you doing?"
                 mediaUrl:
-                  type: string
-                  format: uri
-                  description: The URL of the media
-                  example: "https://example.com/media/image123.jpg"
+                  $ref: '#/components/schemas/media'
               required:
               - messageType
         required: true
@@ -469,7 +464,6 @@ paths:
         A message can be deleted only if it's from
         the user that has sent it
       operationId: deleteMessage
-      # how to authenticate?
       parameters:
       - name: conversationId
         in: path
@@ -707,17 +701,11 @@ paths:
           description: Not allowed
         '404':
           description: Group not found
-        '413':
-          description: Payload Too Large
-        '415':
-          description: Unsupported Media Type
-            accepted = (.png, .jpg, .jpeg, .gif)
         '500':
           description: Server error
 
 
   /users:
-    # rivedere
     get:
       tags: ["users"]
       summary: Returns a list containing all the WASAText users
@@ -757,5 +745,47 @@ paths:
           description: Not allowed
         '404':
           description: No users were found
+        '500':
+          description: Server error
+
+
+  /upload:
+    post:
+      tags: ["media"]
+      summary: Upload an image to the server
+      description: |-
+        Uploads an image to the server and returns the URL for access
+      operationId: uploadImage
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: The image file to upload
+      responses:
+        '201':
+          description: Image uploaded successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  mediaUrl:
+                    $ref: '#/components/schemas/media'
+        '400':
+          description: Bad Request - Missing parameters
+        '401':
+          description: Unauthorized - Please authenticate
+        '403':
+          description: Not allowed
+        '413':
+          description: Payload Too Large
+        '415':
+          description: Unsupported Media Type
+            accepted = (.png, .jpg, .jpeg, .gif)
         '500':
           description: Server error
