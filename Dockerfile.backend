@@ -1,0 +1,18 @@
+# Dockerfile.backend
+
+FROM golang:1.21 AS builder
+
+WORKDIR /src
+COPY . .
+
+RUN go build -o /app/webapi ./cmd/webapi
+
+FROM debian:bookworm
+
+WORKDIR /app
+COPY --from=builder /app/webapi ./
+COPY --from=builder /src/cmd/webapi/assets ./assets
+
+EXPOSE 3000
+CMD ["/app/webapi"]
+

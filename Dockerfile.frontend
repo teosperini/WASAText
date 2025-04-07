@@ -1,0 +1,27 @@
+# Dockerfile.frontend
+
+FROM node:lts AS builder
+
+WORKDIR /src/
+
+# Copiamo solo i file del frontend
+COPY ./webui ./webui
+
+WORKDIR /src/webui
+
+# Serve yarn.lock e .yarnrc.yml corretti se usi Yarn 4+
+# Per evitare errori di lockfile
+RUN corepack enable && yarn install --immutable
+
+# Build produzione
+RUN yarn build-prod
+
+# --- FASE finale ---
+FROM nginx:alpine
+
+# Copia la build Vite in nginx
+COPY --from=builder /src/webui/dist /usr/share/nginx/html
+
+EXPOSE 80
+CMD ["nginx", "-g", "daemon off;"]
+
