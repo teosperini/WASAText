@@ -1,27 +1,34 @@
 # Dockerfile.frontend
 
+# creo il primo container, temporaneo, chiamato builder
 FROM node:lts AS builder
 
+# imposto la workdir a /src, creando la cartella se non esiste
 WORKDIR /src/
 
-# Copiamo solo i file del frontend
+# copiamo nella cartella /src/webui solo i file
+# del frontend in /webui
 COPY ./webui ./webui
 
+# imposto la workdir a /src/webui
 WORKDIR /src/webui
 
-# Serve yarn.lock e .yarnrc.yml corretti se usi Yarn 4+
-# Per evitare errori di lockfile
+# installo le dipendenze corepack e yarn
 RUN corepack enable && yarn install --immutable
 
-# Build produzione
+# creamo la build di produzione
+# e la mettiamo in /src/webui/dist
 RUN yarn build-prod
 
-# --- FASE finale ---
+# creiamo il container finale
+# che useremo per servire il frontend con nginx
 FROM nginx:alpine
 
-# Copia la build Vite in nginx
+# Copia la build Vite dal builder nel container finale nginx
 COPY --from=builder /src/webui/dist /usr/share/nginx/html
 
+# esponiamo la porta 80
 EXPOSE 80
+# eseguiamo il server nginx
 CMD ["nginx", "-g", "daemon off;"]
 

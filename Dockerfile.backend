@@ -1,18 +1,31 @@
 # Dockerfile.backend
 
+# prima fase, temporanea, chiamata builder
 FROM golang:1.21 AS builder
 
+# imposto la workdir a /src, creando la cartella se non esiste
 WORKDIR /src
+
+# copio tutto il contenuto del progetto qui
 COPY . .
 
+# creo il file eseguibile in /app/webapi
 RUN go build -o /app/webapi ./cmd/webapi
 
+# creo il container finale
 FROM debian:bookworm
 
+# creo la cartella /app nel container finale
 WORKDIR /app
+
+# copio il file eseguibile dal builder in /app
 COPY --from=builder /app/webapi ./
+# copio la cartella assets dal builder in /app
 COPY --from=builder /src/cmd/webapi/assets ./assets
 
+# espongo la porta 3000 su cui ascolta il server
 EXPOSE 3000
+
+# faccio partire il server
 CMD ["/app/webapi"]
 
