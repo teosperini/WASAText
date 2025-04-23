@@ -3,7 +3,6 @@ package database
 import (
 	"database/sql"
 	"errors"
-	"fmt"
 )
 
 func (db *appdbimpl) PostMessageDB(senderId int, convId int, mess MessageToServerDB) (int, string, error) {
@@ -26,8 +25,6 @@ func (db *appdbimpl) PostMessageDB(senderId int, convId int, mess MessageToServe
 	if err != nil {
 		return 0, str, err
 	}
-
-	fmt.Println("ReplyToMessageId:", mess.ReplyToMessageId)
 
 	// Inserimento del messaggio in base al suo tipo
 	var replyId interface{}
