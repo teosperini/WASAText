@@ -134,9 +134,8 @@
 				</div>
 				<div class="chat-header-right">
 					<button
-						v-if="selectedConversation?.chatType === 'group'"
-						@click="openGroupModal"
-						class="group-settings-btn"
+						:class="['group-settings-btn', { disabled: isTempGroup }]"
+						@click="handleGroupSettingsClick"
 					>
 						⚙️ Impostazioni gruppo
 					</button>
@@ -329,7 +328,6 @@ import axios from '@/services/axios.js';
 import ForwardingModal from "@/views/ForwardingModal.vue";
 import EmojiPicker from "@/views/EmojiPicker.vue";
 
-
 export default {
 	name: "ChatView",
 	components: {
@@ -413,15 +411,26 @@ export default {
 			return this.conversations.filter(c =>
 				c.chatName.toLowerCase().includes(query)
 			);
+		},
+		isTempGroup() {
+			return (
+				this.selectedConversation?.chatType === "group" &&
+				this.selectedConversation.conversationId.toString().startsWith("temp-")
+			);
 		}
 	},
 	methods: {
+		handleGroupSettingsClick() {
+			if (!this.isTempGroup) {
+				this.openGroupModal();
+			}
+		},
 		getUserProfileImage(username) {
 			const user = this.users.find(u => u.username === username);
 			return user?.profileImageUrl || 'default.png';
 		},
 		getChatImageUrl(conv) {
-			return conv.chatImageUrl && conv.chatImageUrl.trim() !== '' ? conv.chatImageUrl : 'default.png';
+			return conv.chatImageUrl && conv.chatImageUrl.trim() !== '' ? conv.chatImageUrl : 'group_default.png';
 		},
 		openMessageMenu(e, msg) {
 			if (this.messageMenu.visible) {
@@ -873,7 +882,7 @@ export default {
 			let image = "";
 
 			if (chatType === "group") {
-				image = chatImageUrl || "";
+				image = chatImageUrl || "group_default.png";
 			} else {
 				const otherUser = this.users.find(u => u.username === members[0]);
 				image = otherUser?.profileImageUrl || "";
@@ -998,11 +1007,12 @@ export default {
 				if (!Array.isArray(this.messages)) this.messages = [];
 
 				if (this.selectedConversation.conversationId.toString().startsWith("temp-")) {
+					console.log(this.selectedConversation.chatImageUrl)
 					const response = await axios.post("/conversations", {
 						members: this.fakeChatParticipants,
 						chatType: this.selectedConversation.chatType,
 						groupName: this.selectedConversation.chatName,
-						groupImageUrl: this.selectedConversation.chatImageUrl,
+						groupImageUrl: (this.selectedConversation.chatImageUrl === "group_default.png") ? "" : this.selectedConversation.chatImageUrl,
 						initialMessage: newMsg
 					});
 
@@ -1842,6 +1852,21 @@ input[type="text"] {
 
 .sidebar li {
 	position: relative;
+}
+
+.group-settings-btn.disabled {
+	pointer-events: none;
+	background: linear-gradient(135deg, #cccccc, #aaaaaa);
+	color: #777;
+	cursor: not-allowed;
+	box-shadow: none;
+	transform: none;
+}
+
+.group-settings-btn.disabled:hover {
+	background: linear-gradient(135deg, #cccccc, #aaaaaa);
+	box-shadow: none;
+	transform: none;
 }
 
 </style>

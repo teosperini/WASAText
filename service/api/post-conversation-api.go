@@ -2,6 +2,8 @@ package api
 
 import (
 	"encoding/json"
+	"fmt"
+	"github.com/sirupsen/logrus"
 	"net/http"
 	"strconv"
 
@@ -25,6 +27,17 @@ func (rt *_router) postConversationAPI(w http.ResponseWriter, r *http.Request, _
 		http.Error(w, "Bad Request - Invalid input", http.StatusBadRequest)
 		return
 	}
+
+	if req.ChatType == "group" && req.GroupImageUrl == "" {
+		host := r.Host
+		scheme := "http"
+		if r.TLS != nil {
+			scheme = "https"
+		}
+		req.GroupImageUrl = fmt.Sprintf("%s://%s/assets/group_default.png", scheme, host)
+	}
+
+	logrus.Println("l'immagine è " + req.GroupImageUrl)
 
 	var response []MessageToClient
 	convId, messages, errStr, errCode := rt.db.PostConversationDB(authId, convCreateToDB(req))

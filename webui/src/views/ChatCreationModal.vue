@@ -75,7 +75,7 @@
 							:class="{ selected: selectedUsers.includes(user.username) }"
 							@click="toggleUser(user.username)"
 						>
-							<img :src="user.profileImageUrl || 'default.png'" class="user-img" />
+							<img :src="user.profileImageUrl || 'group_default.png'" class="user-img" />
 							<span>{{ user.username }}</span>
 						</li>
 					</ul>
@@ -147,7 +147,7 @@ export default {
 				chatType: this.chatType,
 				members: this.selectedUsers,
 				groupName: this.chatType === "group" ? this.groupName.trim() : null,
-				chatImageUrl: uploadedUrl || null
+				chatImageUrl: uploadedUrl || "group_default.png"
 			});
 		},
 		toggleUser(username) {

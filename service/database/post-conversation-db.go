@@ -98,7 +98,7 @@ func (db *appdbimpl) PostConversationDB(creatorId int, conv ConversationCreateDB
 	} else {
 		logrus.Println(conv.GroupImageUrl)
 		if conv.GroupImageUrl == "" {
-			conv.GroupImageUrl = "https://cdn-icons-png.flaticon.com/128/11989/11989096.png"
+			// conv.GroupImageUrl = "https://cdn-icons-png.flaticon.com/128/11989/11989096.png"
 		}
 
 		query := `

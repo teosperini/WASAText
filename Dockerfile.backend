@@ -21,7 +21,7 @@ WORKDIR /app
 # copio il file eseguibile dal builder in /app
 COPY --from=builder /app/webapi ./
 # copio la cartella assets dal builder in /app
-COPY --from=builder /src/cmd/webapi/assets ./assets
+COPY --from=builder /src/assets ./assets
 
 # espongo la porta 3000 su cui ascolta il server
 EXPOSE 3000

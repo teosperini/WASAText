@@ -5,7 +5,7 @@
 
 			<div class="group-info">
 				<div class="group-img-wrapper" @click="toggleMenu">
-					<img :src="newImageUrl || imageUrl" class="group-img" />
+					<img :src="newImageUrl || mediaUrl" class="group-img" />
 					<div class="image-menu" v-if="showImageMenu">
 						<button @click.stop="viewImage">Visualizza immagine</button>
 						<button @click.stop="triggerFileInput">Cambia immagine</button>
@@ -52,7 +52,7 @@ export default {
 	name: "GroupProfileModal",
 	props: {
 		groupName: String,
-		imageUrl: String,
+		mediaUrl: String,
 		members: Array, // array di username
 		users: Array,   // array completo di oggetti { username, profileImageUrl }
 		uploadImage: Function
@@ -70,6 +70,7 @@ export default {
 		}
 	},
 	mounted() {
+		console.log("Media URL ricevuto nel GroupProfileModal:", this.mediaUrl);
 		console.log("👥 USERS:", this.users);
 		console.log("🧍‍♂️ MEMBERS:", this.members);
 	},
@@ -89,7 +90,7 @@ export default {
 			this.$emit("close");
 		},
 		viewImage() {
-			window.open(this.newImageUrl || this.imageUrl, "_blank");
+			window.open(this.newImageUrl || this.mediaUrl, "_blank");
 			this.showImageMenu = false;
 		},
 		toggleMenu() {
