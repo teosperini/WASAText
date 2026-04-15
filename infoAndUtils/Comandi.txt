@@ -1,0 +1,37 @@
+DA USARE:
+API:
+	clear; lint-openapi doc/api.yaml
+COMPILARE:
+	DENTRO: teosperini@teo-gbp360:~/Documents/university/WASA/WASAText/cmd/webapi$
+	COMPILE: go build
+	START: webapi
+	go build; clear; webapi
+PROVARE IL SERVER:
+	Andare su swagger
+	Provare ad eseguire i singoli metodi
+TEST FUNZIONAMENTO:
+	curl http://localhost:3000/conversations
+	curl -X POST 'http://localhost:3000/session' -H 'Content-Type: application/json' -d @login.json
+	curl -X PUT 'http://localhost:3000/username' -H 'accept: application/json' -H 'Content-Type: application/json' -H 'Authorization: Bearer 1' -d @newName.json
+	curl -X GET 'http://localhost:3000/users?name=matteo' -H 'Authorization: Bearer 1'
+	curl -X POST 'http://localhost:3000/conversations' -H 'accept: application/json' -H 'Content-Type: application/json' -H 'Authorization: Bearer 1' -d @conv.json
+
+DATABASE UI:
+	sqlitebrowser
+
+DOCKER:
+	BACKEND:
+	docker build -f Dockerfile.backend -t wasatext-backend .
+	docker run -p 3000:3000 wasatext-backend
+	
+	FRONTEND:
+	docker build -f Dockerfile.frontend -t wasatext-frontend .
+	docker run -p 8080:80 wasatext-frontend
+
+FRONTEND:
+	open-node.sh
+	yarn run dev
+	yarn run dev --host 0.0.0.0
+	
+NON MI RICORDO A CHE SERVONO
+grep -E "\{[^}]+\}/\{[^}]+\}" /home/teosperini/Documents/university/WASA/WASAText/doc/api.yaml
